@@ -6,15 +6,15 @@ import {
   SafeAreaView,
   Dimensions,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import React, {useState} from 'react';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import {signInWithEmailAndPassword} from 'firebase/auth';
 const windowWidth = Dimensions.get('window').width;
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useDispatch} from 'react-redux';
-import {auth} from '../firebase/firebase-config';
 import {login} from '../features/user/userSlice';
+import auth from '@react-native-firebase/auth';
 
 const LoginScreen = ({navigation}) => {
   const dispatch = useDispatch();
@@ -25,7 +25,10 @@ const LoginScreen = ({navigation}) => {
   const [hidePassword, setHidePassword] = useState(true);
   const [emailReq, setEmailReq] = useState(false);
   const [passwordReq, setPasswordReq] = useState(false);
-  const [invalidEmailPass, setInvalidEmailPass] = useState(false);
+  const [invalidEmail, setInvalidEmail] = useState(false);
+  const [wrongPass, setWrongPass] = useState(false);
+  const [noUser, setNoUser] = useState(false);
+  const [activeIn, setActiveIn] = useState(false);
 
   const {email, password} = userInput;
 
@@ -38,14 +41,26 @@ const LoginScreen = ({navigation}) => {
   };
 
   const LoginUser = () => {
-    signInWithEmailAndPassword(auth, email, password)
+    setActiveIn(true);
+    auth()
+      .signInWithEmailAndPassword(email, password)
       .then(res => {
+        console.log('res', res);
         dispatch(login(res.user.email));
         storeData(res.user.email);
+        setActiveIn(false);
       })
       .catch(err => {
-        console.log('err', err.message);
-        setInvalidEmailPass(true);
+        if (err.code === 'auth/wrong-password') {
+          setWrongPass(true);
+        }
+        if (err.code === 'auth/user-not-found') {
+          setNoUser(true);
+        }
+        if (err.code === 'auth/invalid-email') {
+          setInvalidEmail(true);
+        }
+        setActiveIn(false);
       });
   };
 
@@ -108,7 +123,9 @@ const LoginScreen = ({navigation}) => {
                 email: value,
               });
               setEmailReq(false);
-              setInvalidEmailPass(false);
+              setInvalidEmail(false);
+              setNoUser(false);
+              setWrongPass(false);
             }}
             selectionColor="#f8d458"
             style={{
@@ -162,7 +179,9 @@ const LoginScreen = ({navigation}) => {
                 password: value,
               });
               setPasswordReq(false);
-              setInvalidEmailPass(false);
+              setWrongPass(false);
+              setInvalidEmail(false);
+              setNoUser(false);
             }}
             secureTextEntry={hidePassword}
             selectionColor="#f8d458"
@@ -196,7 +215,7 @@ const LoginScreen = ({navigation}) => {
             Atleast 6 characters
           </Text>
         )}
-        {invalidEmailPass && (
+        {invalidEmail && (
           <Text
             style={{
               color: '#f8d458',
@@ -205,7 +224,31 @@ const LoginScreen = ({navigation}) => {
               paddingLeft: 4,
               textAlign: 'center',
             }}>
-            Invalid email / Wrong password!
+            Invalid email!
+          </Text>
+        )}
+        {noUser && (
+          <Text
+            style={{
+              color: '#f8d458',
+              fontFamily: 'Kanit-Regular',
+              marginTop: 3,
+              paddingLeft: 4,
+              textAlign: 'center',
+            }}>
+            No user found!
+          </Text>
+        )}
+        {wrongPass && (
+          <Text
+            style={{
+              color: '#f8d458',
+              fontFamily: 'Kanit-Regular',
+              marginTop: 3,
+              paddingLeft: 4,
+              textAlign: 'center',
+            }}>
+            Wrong password!
           </Text>
         )}
         <TouchableOpacity
@@ -215,29 +258,47 @@ const LoginScreen = ({navigation}) => {
             Forgot password?
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={{
-            backgroundColor: '#f8d458',
-            marginHorizontal: 50,
-            marginVertical: 10,
-            alignItems: 'center',
-            paddingVertical: 15,
-            borderRadius: 10,
-          }}
-          onPress={() => {
-            if (!email) {
-              setEmailReq(true);
-            } else if (password.length < 6) {
-              setPasswordReq(true);
-            } else {
-              LoginUser();
-            }
-          }}>
-          <Text
-            style={{color: '#000', fontFamily: 'Kanit-Regular', fontSize: 20}}>
-            Login
-          </Text>
-        </TouchableOpacity>
+        {!activeIn ? (
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#f8d458',
+              marginHorizontal: 50,
+              marginVertical: 10,
+              alignItems: 'center',
+              paddingVertical: 15,
+              borderRadius: 10,
+            }}
+            onPress={() => {
+              if (!email) {
+                setEmailReq(true);
+              } else if (password.length < 6) {
+                setPasswordReq(true);
+              } else {
+                LoginUser();
+              }
+            }}>
+            <Text
+              style={{
+                color: '#000',
+                fontFamily: 'Kanit-Regular',
+                fontSize: 20,
+              }}>
+              Login
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#f8d458',
+              marginHorizontal: 50,
+              marginVertical: 10,
+              alignItems: 'center',
+              paddingVertical: 15,
+              borderRadius: 10,
+            }}>
+            <ActivityIndicator color="#000" size={20} />
+          </TouchableOpacity>
+        )}
         <View
           style={{
             flexDirection: 'row',

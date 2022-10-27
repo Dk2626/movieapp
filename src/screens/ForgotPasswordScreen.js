@@ -6,25 +6,31 @@ import {
   TextInput,
   Dimensions,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import React, {useState} from 'react';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import {sendPasswordResetEmail} from 'firebase/auth';
-import {auth} from '../firebase/firebase-config';
+import auth from '@react-native-firebase/auth';
 const windowWidth = Dimensions.get('window').width;
 
-const ForgotPasswordScreen = () => {
+const ForgotPasswordScreen = ({navigation}) => {
   const [email, setEmail] = useState('');
-  const [emailReq, setEmailReq] = useState(false);
   const [invalidEmailPass, setInvalidEmailPass] = useState(false);
+  const [mailSent, setMailSent] = useState(false);
+  const [activeIn, setActiveIn] = useState(false);
 
   const ForgotPassword = () => {
-    sendPasswordResetEmail(auth, email)
-      .then(res => {
-        console.log('res', res);
+    setActiveIn(true);
+    auth()
+      .sendPasswordResetEmail(email)
+      .then(() => {
+        setMailSent(true);
+        setActiveIn(false);
       })
       .catch(err => {
         console.log('err', err);
+        setInvalidEmailPass(true);
+        setActiveIn(false);
       });
   };
 
@@ -67,7 +73,7 @@ const ForgotPasswordScreen = () => {
             alignItems: 'center',
             width: windowWidth / 1.2,
             marginTop: 10,
-            marginBottom: emailReq ? 0 : 10,
+            marginBottom: invalidEmailPass ? 0 : 10,
             borderRadius: 10,
           }}>
           <Icon
@@ -83,8 +89,8 @@ const ForgotPasswordScreen = () => {
             value={email}
             onChangeText={value => {
               setEmail(value);
-              setEmailReq(false);
               setInvalidEmailPass(false);
+              setMailSent(false);
             }}
             selectionColor="#f8d458"
             style={{
@@ -95,7 +101,7 @@ const ForgotPasswordScreen = () => {
             }}
           />
         </View>
-        {emailReq && (
+        {invalidEmailPass && (
           <Text
             style={{
               color: '#f8d458',
@@ -103,24 +109,71 @@ const ForgotPasswordScreen = () => {
               marginTop: 3,
               paddingLeft: 4,
             }}>
-            Email required!
+            Email doesn't exist!
           </Text>
         )}
-        <TouchableOpacity
-          style={{
-            backgroundColor: '#f8d458',
-            marginHorizontal: 50,
-            marginVertical: 10,
-            alignItems: 'center',
-            paddingVertical: 15,
-            borderRadius: 10,
-          }}
-          onPress={() => ForgotPassword()}>
+        {mailSent && (
           <Text
-            style={{color: '#000', fontFamily: 'Kanit-Regular', fontSize: 20}}>
-            Change password
+            style={{
+              color: '#f8d458',
+              fontFamily: 'Kanit-Regular',
+              marginTop: 3,
+              paddingLeft: 4,
+              width: windowWidth / 1.3,
+            }}>
+            Password reset have sent to your email, kindly check spam folder
+            also!
           </Text>
-        </TouchableOpacity>
+        )}
+        {!activeIn ? (
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#f8d458',
+              marginHorizontal: 50,
+              marginVertical: 10,
+              alignItems: 'center',
+              paddingVertical: 15,
+              borderRadius: 10,
+            }}
+            onPress={() => ForgotPassword()}>
+            <Text
+              style={{
+                color: '#000',
+                fontFamily: 'Kanit-Regular',
+                fontSize: 20,
+              }}>
+              Change password
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#f8d458',
+              marginHorizontal: 50,
+              marginVertical: 10,
+              alignItems: 'center',
+              paddingVertical: 15,
+              borderRadius: 10,
+            }}>
+            <ActivityIndicator color="#000" size={20} />
+          </TouchableOpacity>
+        )}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginVertical: 10,
+          }}>
+          <Text style={{fontFamily: 'Kanit-Regular', color: '#fff'}}>
+            Go back?{' '}
+          </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <Text style={{color: '#f8d458', fontFamily: 'Kanit-Regular'}}>
+              Login
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );

@@ -8,28 +8,47 @@ import {
   TouchableWithoutFeedback,
   ActivityIndicator,
   Image,
+  BackHandler,
+  Modal,
 } from 'react-native';
-import React, {useState, useRef} from 'react';
+import React, {useState, useRef, useEffect} from 'react';
 import Orientation from 'react-native-orientation-locker';
-import Video from 'react-native-video';
+import Video, {TextTrackType} from 'react-native-video';
 import Slider from '@react-native-community/slider';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import Fontisto from 'react-native-vector-icons/Fontisto';
 import {SafeAreaView} from 'react-native-safe-area-context';
 const windowWidth = Dimensions.get('window').width;
 import AntDesign from 'react-native-vector-icons/AntDesign';
 let overlayTimer;
 
 const MovieMainScreen = ({navigation, route}) => {
-  const {item} = route.params;
-  const {url, movieName, img, cast, director, rating, year, desc} = item;
+  const {item, freeTrial, expireDate} = route.params;
+  const {videoUrl, movieName, posterImg, cast, director, rating, year, desc} =
+    item;
   const [Fullscreen, setFullscreen] = useState(false);
-  const [paused, setPaused] = useState(true);
+  const [paused, setPaused] = useState(false);
   const [currentTime, setcurrentTime] = useState(0);
   const [duration, setduration] = useState(0.1);
   const playerRef = useRef();
   const [showControl, setshowControl] = useState(true);
   const [seek, setSeek] = useState(false);
   const [buffer, setBuffer] = useState(false);
+  const [locked, setLocked] = useState(false);
+  const [sub, setSub] = useState('');
+  const [cc, setCc] = useState('index');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [date, setDate] = useState(new Date().toLocaleDateString());
+
+  useEffect(() => {
+    if (freeTrial == 'off' && !expireDate) {
+      setPaused(true);
+      setModalVisible(true);
+    } else if (freeTrial == 'off' && date > expireDate) {
+      setPaused(true);
+      setModalVisible(true);
+    }
+  }, []);
 
   const showControls = () => {
     setshowControl(!showControl);
@@ -50,6 +69,19 @@ const MovieMainScreen = ({navigation, route}) => {
       setFullscreen(true);
     }
   };
+
+  const FullscreenTogglee = () => {
+    Orientation.lockToPortrait();
+    StatusBar.setHidden(false);
+    navigation.setOptions({headerShown: false});
+    setFullscreen(false);
+  };
+
+  useEffect(() => {
+    BackHandler.addEventListener('hardwareBackPress', FullscreenTogglee);
+    return () =>
+      BackHandler.removeEventListener('hardwareBackPress', FullscreenTogglee);
+  }, []);
 
   const backward = () => {
     playerRef.current.seek(currentTime - 5);
@@ -73,8 +105,12 @@ const MovieMainScreen = ({navigation, route}) => {
     setBuffer(true);
   };
 
-  const load = ({duration}) => {
-    setduration(duration);
+  const load = data => {
+    let filterSub = data.textTracks.filter(textTrack => {
+      return textTrack.language == 'en';
+    });
+    setSub(filterSub[0]);
+    setduration(data.duration);
     setBuffer(false);
   };
 
@@ -93,110 +129,379 @@ const MovieMainScreen = ({navigation, route}) => {
 
   return (
     <SafeAreaView style={{flex: 1}}>
+      <Modal animationType="fade" transparent={true} visible={modalVisible}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.8)',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}>
+          <View
+            style={{
+              alignItems: 'center',
+              backgroundColor: '#191919',
+              borderRadius: 10,
+              paddingHorizontal: 60,
+              paddingVertical: 30,
+            }}>
+            {!expireDate && (
+              <View style={{alignItems: 'center'}}>
+                <Text
+                  style={{
+                    color: '#fff',
+                    fontSize: 20,
+                    fontFamily: 'Kanit-Regular',
+                    marginBottom: 10,
+                  }}>
+                  You are not a Subscribe yet
+                </Text>
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#f8d458',
+                    paddingVertical: 15,
+                    paddingHorizontal: 30,
+                    borderRadius: 10,
+                    marginBottom: 10,
+                  }}
+                  onPress={() => {
+                    navigation.navigate('MovieList');
+                    navigation.navigate('MoviePlan');
+                  }}>
+                  <Text
+                    style={{
+                      color: '#000',
+                      fontFamily: 'Kanit-Regular',
+                    }}>
+                    Subscribe Now!
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#000',
+                    paddingVertical: 15,
+                    paddingHorizontal: 30,
+                    borderRadius: 10,
+                    borderColor: '#f8d458',
+                    borderWidth: 1,
+                    marginBottom: 10,
+                  }}
+                  onPress={() => navigation.navigate('MovieList')}>
+                  <Text
+                    style={{
+                      color: '#f8d458',
+                      fontFamily: 'Kanit-Regular',
+                    }}>
+                    Back to Home
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {expireDate && (
+              <>
+                {date > expireDate && (
+                  <View style={{alignItems: 'center'}}>
+                    <Text
+                      style={{
+                        color: '#fff',
+                        fontSize: 20,
+                        fontFamily: 'Kanit-Regular',
+                        marginBottom: 10,
+                      }}>
+                      Your Subscription validity over
+                    </Text>
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: '#f8d458',
+                        paddingVertical: 15,
+                        paddingHorizontal: 30,
+                        borderRadius: 10,
+                        marginBottom: 10,
+                      }}
+                      onPress={() => {
+                        navigation.navigate('MovieList');
+                        navigation.navigate('MoviePlan');
+                      }}>
+                      <Text
+                        style={{
+                          color: '#000',
+                          fontFamily: 'Kanit-Regular',
+                        }}>
+                        Subscribe Now!
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: '#000',
+                        paddingVertical: 15,
+                        paddingHorizontal: 30,
+                        borderRadius: 10,
+                        borderColor: '#f8d458',
+                        borderWidth: 1,
+                        marginBottom: 10,
+                      }}
+                      onPress={() => navigation.navigate('MovieList')}>
+                      <Text
+                        style={{
+                          color: '#f8d458',
+                          fontFamily: 'Kanit-Regular',
+                        }}>
+                        Back to Home
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
       <TouchableWithoutFeedback onPress={showControls}>
         <View style={Fullscreen ? styles.fullscreenVideo : styles.video}>
-          <Video
-            source={{uri: url}}
-            style={{...StyleSheet.absoluteFill}}
-            resizeMode={'cover'}
-            paused={paused}
-            ref={playerRef}
-            onLoadStart={onLoadStart}
-            onLoad={load}
-            onProgress={handleProgress}
-            onBuffer={onBuffer}
-          />
-          {showControl && (
-            <View
-              style={{
-                position: 'absolute',
-                top: 0,
-                bottom: 0,
-                left: 0,
-                right: 0,
-                backgroundColor: '#000000c4',
-                justifyContent: 'space-between',
-              }}>
-              <TouchableOpacity
-                onPress={FullscreenToggle}
-                style={{
-                  alignSelf: 'flex-end',
-                  paddingTop: 15,
-                  paddingRight: 15,
-                }}>
-                <Icon
-                  name={Fullscreen ? 'fullscreen-exit' : 'fullscreen'}
-                  style={{fontSize: Fullscreen ? 30 : 25, color: 'white'}}
-                />
-              </TouchableOpacity>
-              <View
-                style={{flexDirection: 'row', justifyContent: 'space-evenly'}}>
-                {buffer ? (
-                  <ActivityIndicator
-                    color="white"
-                    size={Fullscreen ? 30 : 25}
-                  />
-                ) : (
-                  <>
-                    {!paused && (
-                      <TouchableOpacity onPress={backward}>
-                        <Icon
-                          name="replay-5"
-                          style={{
-                            fontSize: Fullscreen ? 30 : 25,
-                            color: 'white',
-                          }}
-                        />
-                      </TouchableOpacity>
-                    )}
-                    <TouchableOpacity onPress={() => setPaused(!paused)}>
-                      <Icon
-                        name={paused ? 'play-arrow' : 'pause'}
-                        style={{fontSize: Fullscreen ? 30 : 25, color: 'white'}}
-                      />
-                    </TouchableOpacity>
-                    {!paused && (
-                      <TouchableOpacity onPress={forward}>
-                        <Icon
-                          name="forward-5"
-                          style={{
-                            fontSize: Fullscreen ? 30 : 25,
-                            color: 'white',
-                          }}
-                        />
-                      </TouchableOpacity>
-                    )}
-                  </>
-                )}
-              </View>
-              <View style={{margin: 20}}>
-                <Slider
-                  style={{marginBottom: 5}}
-                  minimumTrackTintColor="white"
-                  maximumTrackTintColor="white"
-                  thumbTintColor="white"
-                  minimumValue={0}
-                  maximumValue={100}
-                  value={(currentTime / duration) * 100}
-                  onValueChange={value => {
-                    setcurrentTime((value * duration) / 100);
-                  }}
-                  onSlidingStart={() => setSeek(true)}
-                  onSlidingComplete={value => {
-                    setSeek(false);
-                    playerRef.current.seek((value * duration) / 100);
-                  }}
-                />
+          {!sub == '' ? (
+            <Video
+              source={{
+                uri: videoUrl,
+              }}
+              style={{...StyleSheet.absoluteFill}}
+              resizeMode={'cover'}
+              paused={paused}
+              ref={playerRef}
+              onLoadStart={onLoadStart}
+              onLoad={load}
+              onProgress={handleProgress}
+              onBuffer={onBuffer}
+              selectedTextTrack={{
+                type: cc,
+                value: 0,
+              }}
+              textTracks={[
+                {
+                  index: 0,
+                  title: sub.title,
+                  language: sub.language,
+                  type: TextTrackType.SRT, // "application/x-subrip"
+                  uri: 'https://durian.blender.org/wp-content/content/subtitles/sintel_es.srt',
+                },
+              ]}
+            />
+          ) : (
+            <Video
+              source={{
+                uri: videoUrl,
+              }}
+              style={{...StyleSheet.absoluteFill}}
+              resizeMode={'cover'}
+              paused={paused}
+              ref={playerRef}
+              onLoadStart={onLoadStart}
+              onLoad={load}
+              onProgress={handleProgress}
+              onBuffer={onBuffer}
+            />
+          )}
+          {!locked ? (
+            <>
+              {showControl && (
                 <View
                   style={{
-                    flexDirection: 'row',
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    backgroundColor: 'rgba(0,0,0,0.8)',
                     justifyContent: 'space-between',
                   }}>
-                  <Text style={{color: 'white'}}>{getTime(currentTime)}</Text>
-                  <Text style={{color: 'white'}}>{getTime(duration)}</Text>
+                  <View
+                    style={{
+                      paddingTop: 15,
+                      paddingLeft: 15,
+                      paddingRight: 15,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: Fullscreen ? 'space-between' : 'flex-end',
+                    }}>
+                    {Fullscreen && (
+                      <View>
+                        <Text
+                          style={{
+                            color: '#f8d458',
+                            fontFamily: 'Kanit-Regular',
+                            fontSize: 18,
+                          }}>
+                          {movieName}
+                        </Text>
+                      </View>
+                    )}
+                    <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                      {Fullscreen && (
+                        <TouchableOpacity onPress={() => setLocked(true)}>
+                          <Fontisto
+                            name="locked"
+                            style={{
+                              fontSize: 21,
+                              color: 'white',
+                              marginRight: 15,
+                            }}
+                          />
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity onPress={FullscreenToggle}>
+                        <Icon
+                          name={Fullscreen ? 'fullscreen-exit' : 'fullscreen'}
+                          style={{
+                            fontSize: Fullscreen ? 30 : 25,
+                            color: 'white',
+                          }}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-evenly',
+                    }}>
+                    {buffer ? (
+                      <ActivityIndicator
+                        color="#f8d458"
+                        size={Fullscreen ? 40 : 25}
+                      />
+                    ) : (
+                      <>
+                        {!paused && (
+                          <TouchableOpacity onPress={backward}>
+                            <Icon
+                              name="replay-5"
+                              style={{
+                                fontSize: Fullscreen ? 40 : 25,
+                                color: 'white',
+                              }}
+                            />
+                          </TouchableOpacity>
+                        )}
+                        <TouchableOpacity onPress={() => setPaused(!paused)}>
+                          <Icon
+                            name={paused ? 'play-arrow' : 'pause'}
+                            style={{
+                              fontSize: Fullscreen ? 40 : 25,
+                              color: '#f8d458',
+                            }}
+                          />
+                        </TouchableOpacity>
+                        {!paused && (
+                          <TouchableOpacity onPress={forward}>
+                            <Icon
+                              name="forward-5"
+                              style={{
+                                fontSize: Fullscreen ? 40 : 25,
+                                color: 'white',
+                              }}
+                            />
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    )}
+                  </View>
+                  <View style={{margin: 20}}>
+                    <Slider
+                      style={{marginBottom: 5}}
+                      minimumTrackTintColor="#f8d458"
+                      maximumTrackTintColor="#f8d458"
+                      thumbTintColor="white"
+                      minimumValue={0}
+                      maximumValue={100}
+                      value={(currentTime / duration) * 100}
+                      onValueChange={value => {
+                        setcurrentTime((value * duration) / 100);
+                      }}
+                      onSlidingStart={() => setSeek(true)}
+                      onSlidingComplete={value => {
+                        setSeek(false);
+                        playerRef.current.seek((value * duration) / 100);
+                      }}
+                    />
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text
+                        style={{
+                          color: 'white',
+                          fontFamily: 'Kanit-Regular',
+                          width: windowWidth / 7,
+                          textAlign: 'center',
+                        }}>
+                        {getTime(currentTime)}
+                      </Text>
+                      {!sub == '' && (
+                        <TouchableOpacity
+                          style={{flexDirection: 'row', alignItems: 'center'}}
+                          onPress={() => {
+                            if (cc == 'index') {
+                              setCc('disable');
+                            } else if (cc == 'disable') {
+                              setCc('index');
+                            }
+                          }}>
+                          <Icon
+                            name="subtitles"
+                            style={{color: cc == 'index' ? '#f8d458' : 'grey'}}
+                            size={20}
+                          />
+                          <Text
+                            style={{
+                              color: cc == 'index' ? '#f8d458' : 'grey',
+                              fontFamily: 'Kanit-Regular',
+                              marginLeft: 2,
+                            }}>
+                            Subtitle
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                      <Text
+                        style={{
+                          color: '#f8d458',
+                          fontFamily: 'Kanit-Regular',
+                          width: windowWidth / 7,
+                          textAlign: 'center',
+                        }}>
+                        {getTime(duration)}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
-              </View>
-            </View>
+              )}
+            </>
+          ) : (
+            <>
+              {showControl && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                  }}>
+                  <TouchableOpacity
+                    style={{
+                      paddingTop: 15,
+                      paddingLeft: 15,
+                      paddingRight: 15,
+                    }}
+                    onPress={() => setLocked(false)}>
+                    <Fontisto
+                      name="unlocked"
+                      style={{
+                        fontSize: 25,
+                        color: '#f8d458',
+                      }}
+                    />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </>
           )}
         </View>
       </TouchableWithoutFeedback>
@@ -212,7 +517,7 @@ const MovieMainScreen = ({navigation, route}) => {
               flexDirection: 'row',
             }}>
             <Image
-              source={{uri: img}}
+              source={{uri: posterImg}}
               style={{
                 width: 150,
                 height: 200,
@@ -277,7 +582,12 @@ const MovieMainScreen = ({navigation, route}) => {
                 /10
               </Text>
             </View>
-            <View style={{flexDirection: 'row', paddingVertical: 10}}>
+            <View
+              style={{
+                flexDirection: 'row',
+                paddingVertical: 10,
+                width: windowWidth / 1.2,
+              }}>
               <Text
                 style={{
                   color: 'grey',
@@ -295,7 +605,12 @@ const MovieMainScreen = ({navigation, route}) => {
                 {director}
               </Text>
             </View>
-            <View style={{flexDirection: 'row', paddingVertical: 10}}>
+            <View
+              style={{
+                flexDirection: 'row',
+                paddingVertical: 10,
+                width: windowWidth / 1.2,
+              }}>
               <Text
                 style={{
                   color: 'grey',
@@ -320,6 +635,7 @@ const MovieMainScreen = ({navigation, route}) => {
               fontSize: 18,
               color: '#fff',
               paddingVertical: 10,
+              width: windowWidth / 1.2,
             }}>
             {desc}
           </Text>

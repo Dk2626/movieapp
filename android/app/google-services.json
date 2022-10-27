@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "1081559188510",
+    "firebase_url": "https://mvapp-78a64-default-rtdb.firebaseio.com",
+    "project_id": "mvapp-78a64",
+    "storage_bucket": "mvapp-78a64.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1081559188510:android:0bf21d64032bcf58c9da0f",
+        "android_client_info": {
+          "package_name": "com.movieapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1081559188510-rmseeqhs0kgbrg1k1tnhi7sif3h6kcin.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4wFlZ0PbSlColWylJMDrcvK41jIcf5Jk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1081559188510-rmseeqhs0kgbrg1k1tnhi7sif3h6kcin.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

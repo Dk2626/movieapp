@@ -1,32 +1,28 @@
 import {
-  View,
-  Text,
   SafeAreaView,
-  TouchableOpacity,
+  View,
+  Keyboard,
   TextInput,
   Dimensions,
-  FlatList,
+  TouchableOpacity,
+  Text,
   Image,
-  Keyboard,
+  FlatList,
   ActivityIndicator,
 } from 'react-native';
-import React, {useState, useEffect, useRef} from 'react';
-import Search from 'react-native-vector-icons/FontAwesome';
+import React, {useEffect, useState, useRef} from 'react';
 const windowWidth = Dimensions.get('window').width;
 const windowHeight = Dimensions.get('window').height;
+import Search from 'react-native-vector-icons/FontAwesome';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import database from '@react-native-firebase/database';
-import {useSelector} from 'react-redux';
 
-const MovieListScreen = ({navigation}) => {
+const AdminMainScreen = ({navigation}) => {
   const isMounted = useRef(false);
-  const user = useSelector(state => state.user.user);
   const [keyboardShow, setKeyboardShow] = useState();
   const [movieLists, setMovieLists] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
-  const [freeTrial, setFreeTrial] = useState('');
-  const [expireDate, setExpireDate] = useState('');
 
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener(
@@ -55,7 +51,17 @@ const MovieListScreen = ({navigation}) => {
       .on('value', snapshot => {
         if (isMounted.current) {
           snapshot.forEach(d => {
-            list.push(d.val());
+            list.push({
+              id: d.key,
+              movieName: d.val().movieName,
+              year: d.val().year,
+              rating: d.val().rating,
+              director: d.val().director,
+              cast: d.val().cast,
+              desc: d.val().desc,
+              posterImg: d.val().posterImg,
+              videoUrl: d.val().videoUrl,
+            });
           });
           setMovieLists(list.reverse());
           setLoading(false);
@@ -88,48 +94,6 @@ const MovieListScreen = ({navigation}) => {
     }
   };
 
-  const getfreeTrial = () => {
-    database()
-      .ref('freetrial')
-      .on('value', snapshot => {
-        if (isMounted.current) {
-          snapshot.forEach(d => {
-            setFreeTrial(d.val().freeTrial);
-          });
-        }
-      });
-  };
-
-  useEffect(() => {
-    isMounted.current = true;
-    getfreeTrial();
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
-
-  const getUserExpireDate = () => {
-    database()
-      .ref('Users')
-      .on('value', snapshot => {
-        if (isMounted.current) {
-          snapshot.forEach(d => {
-            if (d.val().email == user) {
-              setExpireDate(d.val().expireDate);
-            }
-          });
-        }
-      });
-  };
-
-  useEffect(() => {
-    isMounted.current = true;
-    getUserExpireDate();
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
-
   if (loading) {
     return (
       <SafeAreaView
@@ -150,6 +114,42 @@ const MovieListScreen = ({navigation}) => {
           backgroundColor: '#000',
           padding: 20,
         }}>
+        <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#f8d458',
+              paddingVertical: 10,
+              paddingHorizontal: 15,
+              borderRadius: 10,
+            }}
+            onPress={() => navigation.navigate('AdminPlan')}>
+            <Text
+              style={{
+                color: '#000',
+                fontFamily: 'Kanit-Regular',
+                fontSize: 18,
+              }}>
+              Plan
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#f8d458',
+              paddingVertical: 10,
+              paddingHorizontal: 15,
+              borderRadius: 10,
+            }}
+            onPress={() => navigation.navigate('AdminAddEdit', {item: ''})}>
+            <Text
+              style={{
+                color: '#000',
+                fontFamily: 'Kanit-Regular',
+                fontSize: 18,
+              }}>
+              Add
+            </Text>
+          </TouchableOpacity>
+        </View>
         <View style={{alignSelf: 'center'}}>
           <View
             style={{
@@ -196,7 +196,7 @@ const MovieListScreen = ({navigation}) => {
         ) : (
           <View
             style={{
-              height: keyboardShow ? windowHeight / 2 : windowHeight / 1.25,
+              height: keyboardShow ? windowHeight / 2.2 : windowHeight / 1.3,
             }}>
             <FlatList
               data={filterMovie()}
@@ -213,13 +213,7 @@ const MovieListScreen = ({navigation}) => {
                       borderBottomColor: 'grey',
                       borderWidth: index == filterMovie().length - 1 ? 0 : 0.2,
                     }}
-                    onPress={() =>
-                      navigation.navigate('MovieMain', {
-                        item,
-                        freeTrial,
-                        expireDate,
-                      })
-                    }>
+                    onPress={() => navigation.navigate('AdminAddEdit', {item})}>
                     <Image
                       source={{uri: posterImg}}
                       style={{
@@ -314,4 +308,4 @@ const MovieListScreen = ({navigation}) => {
   }
 };
 
-export default MovieListScreen;
+export default AdminMainScreen;

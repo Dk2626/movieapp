@@ -6,20 +6,19 @@ import {
   SafeAreaView,
   Dimensions,
   Image,
+  ActivityIndicator,
 } from 'react-native';
-import React, {useState, useEffect, useRef} from 'react';
-import {auth, database} from '../firebase/firebase-config';
-import {createUserWithEmailAndPassword} from 'firebase/auth';
+import React, {useState} from 'react';
 const windowWidth = Dimensions.get('window').width;
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import IconF from 'react-native-vector-icons/Feather';
 import {useDispatch} from 'react-redux';
 import {login} from '../features/user/userSlice';
-import {ref, push, get} from 'firebase/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import auth from '@react-native-firebase/auth';
+import database from '@react-native-firebase/database';
 
 const RegisterScreen = ({navigation}) => {
-  const isMounted = useRef(false);
   const dispatch = useDispatch();
   const [userInput, setUserInput] = useState({
     name: '',
@@ -32,12 +31,12 @@ const RegisterScreen = ({navigation}) => {
   const [passwordReq, setPasswordReq] = useState(false);
   const [invalidEmail, setInvalidEmail] = useState(false);
   const [emailExist, setEmailExist] = useState(false);
+  const [activeIn, setActiveIn] = useState(false);
 
   const {name, email, password} = userInput;
 
   const storeUser = () => {
-    const db = database;
-    push(ref(db, 'Users'), {
+    database().ref('Users').push({
       name,
       email,
       registerDate: new Date().toLocaleDateString(),
@@ -54,42 +53,26 @@ const RegisterScreen = ({navigation}) => {
   };
 
   const RegisterUser = () => {
-    createUserWithEmailAndPassword(auth, email, password)
+    setActiveIn(true);
+    auth()
+      .createUserWithEmailAndPassword(email, password)
       .then(res => {
+        console.log('res', res);
         dispatch(login(res.user.email));
         storeData(res.user.email);
         storeUser();
+        setActiveIn(false);
       })
       .catch(err => {
-        console.log('err', err);
-        setInvalidEmail(true);
+        if (err.code === 'auth/email-already-in-use') {
+          setEmailExist(true);
+        }
+        if (err.code === 'auth/invalid-email') {
+          setInvalidEmail(true);
+        }
+        setActiveIn(false);
       });
   };
-
-  const getfirebaseDataMail = () => {
-    let emails = [];
-    const db = database;
-    get(ref(db, 'Users')).then(snapshot => {
-      if (isMounted.current) {
-        if (snapshot.exists()) {
-          snapshot.forEach(d => {
-            emails.push(d.val().email);
-          });
-        }
-        if (emails.includes(email)) {
-          setEmailExist(true);
-        } else {
-          setEmailExist(false);
-        }
-      }
-    });
-  };
-
-  useEffect(() => {
-    isMounted.current = true;
-    getfirebaseDataMail();
-    return () => (isMounted.current = false);
-  }, [email]);
 
   return (
     <SafeAreaView
@@ -314,31 +297,49 @@ const RegisterScreen = ({navigation}) => {
             Atleast 6 characters
           </Text>
         )}
-        <TouchableOpacity
-          style={{
-            backgroundColor: '#f8d458',
-            marginHorizontal: 50,
-            marginVertical: 10,
-            alignItems: 'center',
-            paddingVertical: 15,
-            borderRadius: 10,
-          }}
-          onPress={() => {
-            if (!name) {
-              setNameReq(true);
-            } else if (!email) {
-              setEmailReq(true);
-            } else if (password.length < 6) {
-              setPasswordReq(true);
-            } else if (!emailExist) {
-              RegisterUser();
-            }
-          }}>
-          <Text
-            style={{color: '#000', fontFamily: 'Kanit-Regular', fontSize: 20}}>
-            Register
-          </Text>
-        </TouchableOpacity>
+        {!activeIn ? (
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#f8d458',
+              marginHorizontal: 50,
+              marginVertical: 10,
+              alignItems: 'center',
+              paddingVertical: 15,
+              borderRadius: 10,
+            }}
+            onPress={() => {
+              if (!name) {
+                setNameReq(true);
+              } else if (!email) {
+                setEmailReq(true);
+              } else if (password.length < 6) {
+                setPasswordReq(true);
+              } else if (!emailExist) {
+                RegisterUser();
+              }
+            }}>
+            <Text
+              style={{
+                color: '#000',
+                fontFamily: 'Kanit-Regular',
+                fontSize: 20,
+              }}>
+              Register
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#f8d458',
+              marginHorizontal: 50,
+              marginVertical: 10,
+              alignItems: 'center',
+              paddingVertical: 15,
+              borderRadius: 10,
+            }}>
+            <ActivityIndicator color="#000" size={20} />
+          </TouchableOpacity>
+        )}
         <View
           style={{
             flexDirection: 'row',
